@@ -44,6 +44,8 @@ class ModistDataset(IterableDataset):
                 continue
             # replace category with category name only
             category = category[0]
+            if self.speech_only and category != "speech":
+                continue
 
             samples = np.array(mp3_dub[offset:offset+blen].get_array_of_samples(), 
                                 dtype=np.double)            

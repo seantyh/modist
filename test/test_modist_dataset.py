@@ -32,4 +32,6 @@ def test_modist_dataset():
     assert len(lang_set) == 2
     assert len(category_set) == 2
     assert len(samples_set) == 1
-        
+    
+    dataset_so = ModistDataset(dummy_feat_extractor, mp3_list, speech_only=True)
+    assert len(list(dataset_so)) < len(list(dataset))
