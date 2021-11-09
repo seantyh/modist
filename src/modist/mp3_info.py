@@ -14,7 +14,7 @@ def get_lang(mp3_name, lang_path=None):
             for ln in fin.readlines():
                 fname, lang = ln.strip().split(",")
                 lang_map[fname] = lang
-    return lang_map.get(mp3_name)
+    return lang_map.get(Path(mp3_name).name, "none")
 
 def get_segments(mp3_name, seg_dir=None):
     if not seg_dir:
