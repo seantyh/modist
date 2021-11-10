@@ -13,6 +13,20 @@ def dummy_feat_extractor(x, *args, **kwargs):
 def test_dummy_feat_extractor():
     assert dummy_feat_extractor([np.random.randn(10, 4)]*5).input_values
 
+def test_modist_limit():
+    mp3_dir = os.path.join(
+                os.path.dirname(__file__), 
+                "../data/mp3")
+    
+    mp3_list = glob.glob(mp3_dir + "/*.mp3")[:1]
+    ic(mp3_dir, mp3_list)    
+    dataset_1 = ModistDataset(dummy_feat_extractor, mp3_list, randomize_seg=True, limit_minutes=2)        
+    dlen = sum(1 for x in dataset_1)
+    assert dlen < 2*60*60/5/16
+    dataset_2 = ModistDataset(dummy_feat_extractor, mp3_list, randomize_seg=True)
+    dlen_2 = sum(1 for x in dataset_2)
+    assert dlen_2 > 50*60/5/16
+
 def test_modist_randomize():
     mp3_dir = os.path.join(
                 os.path.dirname(__file__), 

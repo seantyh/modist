@@ -8,7 +8,8 @@ from .mp3_info import get_lang, get_segment_type, get_segments
 class ModistDataset(IterableDataset):
     def __init__(self, w2v_feat_extractor, mp3_list,
                 sample_rate=16000, batch_size=16, secs_per_seq=5,
-                speech_only=False, randomize_seg=False, random_seed=None):
+                speech_only=False, randomize_seg=False, random_seed=None,
+                limit_minutes=None):
         self.feature_extractor = w2v_feat_extractor
         self.sample_rate = sample_rate
         self.mp3_list = mp3_list
@@ -17,6 +18,7 @@ class ModistDataset(IterableDataset):
         self.speech_only = speech_only
         self.randomize_seg = randomize_seg
         self.random_seed = random_seed
+        self.limit_minutes = limit_minutes
         random.seed(self.random_seed)
 
     def __iter__(self):
@@ -42,8 +44,11 @@ class ModistDataset(IterableDataset):
 
     def segment(self, mp3_name, mp3_dub, secs=5):
         blen = secs * 1000
-
-        offsets = list(range(0, len(mp3_dub), blen))
+        
+        offset_max = len(mp3_dub)
+        if self.limit_minutes:
+            offset_max = min(self.limit_minutes*60*1000, len(mp3_dub))
+        offsets = list(range(0, offset_max, blen))
         if self.randomize_seg:            
             random.shuffle(offsets)
 
