@@ -17,11 +17,11 @@ class ModistDataset(IterableDataset):
         self.speech_only = speech_only
         self.randomize_seg = randomize_seg
         self.random_seed = random_seed
+        random.seed(self.random_seed)
 
     def __iter__(self):
         mp3_list = self.mp3_list[::1]
-        if self.randomize_seg:
-            random.seed(self.random_seed)
+        if self.randomize_seg:            
             random.shuffle(mp3_list)
         mp3_iter = map(self.make_mp3_tuple, mp3_list)
         seg_iter = starmap(self.make_sample_tuple, mp3_iter)
@@ -44,8 +44,7 @@ class ModistDataset(IterableDataset):
         blen = secs * 1000
 
         offsets = list(range(0, len(mp3_dub), blen))
-        if self.randomize_seg:
-            random.seed(self.random_seed)
+        if self.randomize_seg:            
             random.shuffle(offsets)
 
         for offset in offsets:
