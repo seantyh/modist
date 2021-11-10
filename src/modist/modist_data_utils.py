@@ -1,6 +1,6 @@
+import random
 from itertools import islice, chain, starmap
 import numpy as np
-import torch
 from torch.utils.data import IterableDataset
 import pydub
 from .mp3_info import get_lang, get_segment_type, get_segments
@@ -8,13 +8,15 @@ from .mp3_info import get_lang, get_segment_type, get_segments
 class ModistDataset(IterableDataset):
     def __init__(self, w2v_feat_extractor, mp3_list, 
                 sample_rate=16000, batch_size=16, secs_per_seq=5,
-                speech_only=False):
+                speech_only=False, randomize_seg=False, random_seed=None):
         self.feature_extractor = w2v_feat_extractor
         self.sample_rate = sample_rate
         self.mp3_list = mp3_list
         self.batch_size = batch_size
         self.secs_per_seq = secs_per_seq
-        self.speech_only = speech_only        
+        self.speech_only = speech_only
+        self.randomize_seg = randomize_seg
+        self.random_seed = random_seed     
 
     def __iter__(self):
         mp3_list = self.mp3_list
@@ -37,7 +39,13 @@ class ModistDataset(IterableDataset):
 
     def segment(self, mp3_name, mp3_dub, secs=5):
         blen = secs * 1000
-        for offset in range(0, len(mp3_dub), blen):
+        
+        offsets = list(range(0, len(mp3_dub), blen))
+        if self.randomize_seg:
+            random.seed(self.random_seed)
+            random.shuffle(offsets)        
+
+        for offset in offsets:
             # category: (category, matched_secs)
             category = get_segment_type(mp3_name, int(offset/1000), int((offset+blen)/1000))            
             if category[1] != secs:

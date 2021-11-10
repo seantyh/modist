@@ -13,6 +13,19 @@ def dummy_feat_extractor(x, *args, **kwargs):
 def test_dummy_feat_extractor():
     assert dummy_feat_extractor([np.random.randn(10, 4)]*5).input_values
 
+def test_modist_randomize():
+    mp3_dir = os.path.join(
+                os.path.dirname(__file__), 
+                "../data/mp3")
+    
+    mp3_list = glob.glob(mp3_dir + "/*.mp3")[:1]
+    ic(mp3_dir, mp3_list)    
+    dataset_1 = ModistDataset(dummy_feat_extractor, mp3_list, randomize_seg=True, random_seed=12345)
+    dataset_2 = ModistDataset(dummy_feat_extractor, mp3_list, randomize_seg=True, random_seed=12345)
+    dataset_3 = ModistDataset(dummy_feat_extractor, mp3_list, randomize_seg=True, random_seed=12346)
+    assert all(x == y for x, y in zip(dataset_1, dataset_2))
+    assert not all(x == y for x, y in zip(dataset_1, dataset_3))
+
 def test_modist_dataset():
     mp3_dir = os.path.join(
                 os.path.dirname(__file__), 
