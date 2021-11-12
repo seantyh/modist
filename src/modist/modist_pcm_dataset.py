@@ -1,6 +1,7 @@
 import random
 from itertools import islice, chain, starmap
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 import pydub
 from .mp3_info import get_lang, get_segment_type, get_segments
@@ -92,6 +93,7 @@ def get_modist_pcm_collate_fn(feature_extractor, lang_encoder, sample_rate):
             return_tensors="pt").input_values
         categories = [x["category"] for x in batch]
         langs = lang_encoder.transform([x["pcm_lang"] for x in batch])
+        langs = torch.tensor(langs, dtype=torch.long)
         return {"tensorX": in_tensor, "lang": langs, "category": categories}
     
     return modist_pcm_collatefn
