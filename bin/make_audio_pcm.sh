@@ -11,7 +11,7 @@ if [ ! -d ${PCM_DIR} ]; then
     mkdir -p ${PCM_DIR}
 fi;
 
-for fname in $(find $MP3_DIR *.mp3); do
+for fname in $(find $MP3_DIR -name *.mp3); do
     fpath=$(realpath ${fname})
     base_name=$(basename ${fname})
     pcm_path=${PCM_DIR}/${base_name%.*}.pcm
@@ -19,8 +19,9 @@ for fname in $(find $MP3_DIR *.mp3); do
     
     if [ ! -f ${pcm_path} ]; then
         echo "transcoding to pcm: ${base_name}"
-        ffmpeg -nostats -loglevel error \
+        ffmpeg -nostats \
             -i $fpath -f s16le -acodec pcm_s16le \
-	    -ss 0 -t 1200 ${pcm_path}
+	        -ss 0 -t 1200 ${pcm_path}
+        break
     fi
 done
