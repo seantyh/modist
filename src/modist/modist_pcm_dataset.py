@@ -86,7 +86,7 @@ class ModistPcmDataset(Dataset):
 
 def get_modist_pcm_collate_fn(feature_extractor, lang_encoder, sample_rate):
     def modist_pcm_collatefn(batch):
-        samples = [x["samples"] for x in batch]
+        samples = [np.array(x["samples"], dtype=np.float32) for x in batch]
         in_tensor = feature_extractor(
             samples, sampling_rate=sample_rate, padding=True,
             return_tensors="pt").input_values
