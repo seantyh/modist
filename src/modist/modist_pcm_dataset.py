@@ -13,22 +13,29 @@ class ModistPcmDataset(Dataset):
                 sample_rate=16000, 
                 pcm_length_in_secs=1200,
                 speech_only=False,
-                limit_minutes=None):
-        
+                limit_minutes=None,
+                limit_data_prop=None):
+        """ModistPcmDataset
+        limit_data_prop: a number between 0~1, the proportion of data being served
+        """
         self.pcm_mmap = {}
         self.pcm_list = pcm_list
         self.secs_per_seq = secs_per_seq
         self.speech_only = speech_only
         self.sample_rate = sample_rate
         self.pcm_length = pcm_length_in_secs * sample_rate
-        self.limit_minutes = limit_minutes
-        self.inventory = self.make_inventory()
+        self.limit_minutes = limit_minutes        
+        self.inventory = self.make_inventory(limit_data_prop)
 
-    def make_inventory(self):
+    def make_inventory(self, limit_data_prop):        
         pcm_tuples = map(self.make_pcm_tuples, self.pcm_list)
         seg_tuples = starmap(self.make_sample_tuples, pcm_tuples)
         data_iter = chain.from_iterable(seg_tuples)
-        return list(data_iter)
+        inventory = list(data_iter)
+        if limit_data_prop is not None:
+            random.shuffle(inventory)
+            inventory = inventory[:int(len(inventory) * limit_data_prop)]
+        return inventory
 
     def __getitem__(self, idx):
         seg_item = self.inventory[idx]
