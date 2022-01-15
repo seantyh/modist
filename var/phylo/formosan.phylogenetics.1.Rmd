@@ -1,0 +1,230 @@
+---
+title: "Phylogenetic Inference of Formosan Languages"
+author: "SK"
+date: "11/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+- The linguistic phylogeny of Austronesian languages is still under-studied.
+
+- computational methods for inferring linguistic phylogenies (**phylogenetic inference**) 
+  - maximum parsimony; 
+  - distance-based methods (UPGMA and neighbor joining); and 
+  - maximum likelihood estimation.
+
+Bowern (2018: 282) notes that the term computational (linguistic) phylogenetics is used in different senses in the literature. It is possible that Jäger in the quotation above is referring specifically to phylogenetic estimation with Bayesian-MCMC methods. I use computational (linguistic) phylogenetics to refer to methods of phylogenetic inference based on at least one of the following: an optimality criterion, an algorithm, or a stochastic trait model.
+
+- the results are interesting but still controversial/intractable.
+
+- DNNs are not in and of themselves "superior" to traditional methods.
+
+
+
+## terms
+
+- An **unrooted tree** is a phylogenetic tree without a defined root. Unrooted trees provide no information about the temporal sequence of lineage-splitting events. See further Baum & Smith (2013: 61–64).
+
+
+
+```{r}
+library(ape)
+#library(phangorn)
+library(ggplot2)
+```
+
+
+
+
+
+# Dataset
+
+Following Dunn et al(2005) on the phylogenetic classification of Papuan and Oceanic languages using grammatical features.
+
+- `austroTW` contains from 13 taxa (i.e., languages, or tips of the phylogenetic tree) encoded with 153 grammatical features (manually encoded based on Reference Grammar).
+- `austroTW.2` contains from 16 taxa with 62 **phonological features**
+
+
+```{r message=FALSE, warning=FALSE}
+require(languageR)
+require(tidyverse)
+#austroTW <- read.table("austroTW", header=T)
+#austroTW <- read_csv("formosan_lgs.csv")
+# extended version from Willy,csv transposed
+austroTW <- read_csv("formosan_dummies.csv") %>% rename(Language=Feature)
+head(austroTW, 10)
+colnames(austroTW)
+#austroTW[1:5,1:5]
+```
+
+> 是否加入區域訊息探索？
+> 只加入語音訊息結果如何？
+
+```{r}
+region = c("Eastern", "Northern", "Southern", "Southern", "Southern", "Southern", "Tsouic", "Northern", "Other", "Northern", "Eastern", "Northern", "Eastern", "Northern", "Tsouic", "Tsouic")
+names(region) = austroTW$Language
+austroTW$Geo = region
+
+austroTW <- austroTW %>%
+  select(Language, Geo, everything())
+
+austroTW$Geo <- factor(austroTW$Geo, levels=names(sort(-table(region))))
+```
+```
+ [1] "Central Amis"    "Squliq Atayal"   "Northern Paiwan" "Isbukun Bunun"  
+ [5] "Puyuma"          "Budai Rukai"     "Tsou"            "Saisiyat"       
+ [9] "Yami"            "Thao"            "Kavalan"         "Truku"          
+[13] "Sakizaya"        "Tgdaya Seediq"   "Saaroa"          "Kanakanavu"  
+```
+
+
+# Methods
+
+## Dendrogram obtained by applying **divisive clustering** and visualization
+
+```{r}
+library(cluster)
+
+pdf("diana.pdf", width=7, height=4.5)
+# austroTW.dist <- dist(austroTW[ ,2:ncol(austroTW)], method="binary")
+# get vector of names
+plotnames = as.character(austroTW$Language)
+
+plot(diana(dist(austroTW[,3:ncol(austroTW)], 
+                method="binary")),
+     labels = plotnames, cex = 0.8, 
+     main= " ", xlab= " ", col=c("black","white"), which.plot = 2)
+
+dev.off()
+```
+- we note a fairly separation of Tsou (F1)
+
+
+## Phylogeny estimation
+
+- Using **neighbor-joining algorithm** to obtain an unrooted phylogenetic tree.
+
+- (options):
+  - use different fonts to highlight subsets of observations;
+  - get the names of the languages into the plot.
+  - `type=u` requests an unrooted tree.
+
+
+```{r}
+library(ape)
+austroTW.dist <- dist(austroTW[ ,3:ncol(austroTW)], method="binary")
+austroTW.dist.tr <- nj(austroTW.dist)
+
+Geo <- as.character(austroTW$Geo[as.numeric(austroTW.dist.tr$tip.label)])
+
+languages <- as.character(austroTW$Language[as.numeric(austroTW.dist.tr$tip.label)])
+#substitute the language names for the row names in the tree object
+#languages[languages=="Yami"] = "(Yami)"
+austroTW.dist.tr$tip.label = languages
+
+geo_label <- as.numeric(austroTW$Geo)
+geo_label[geo_label==5] <- 6
+plot(austroTW.dist.tr, type="u", font = geo_label)
+```
+
+- 可以加入 geographical areas (Li) 產生 unrooted phylogenetic trees
+
+
+
+## Validation
+
+- using `BOOTSTRAP` to validate a cluster.
+
+
+
+
+```{r}
+# define the num. of bootstrap runs, prepare a list which we save the bootstrap trees
+B = 200
+btr = list()
+length(btr) = B
+```
+
+- create 200 bootstrap trees, sampling with replacement from the columns of our data matrix
+
+```{r}
+formosan.mat = austroTW[, 2:ncol(austroTW)]
+formosan.meta = austroTW[ ,1]
+for(i in 1:B) {
+  trB = nj(dist(formosan.mat[ ,sample(ncol(formosan.mat), replace = TRUE)], 
+                method = "binary"))
+  trB$tip.label = as.character(formosan.meta$Language[as.numeric(trB$tip.label)])
+  btr[[i]] = trB
+}
+```
+
+- The proportions of bootstrap trees that support the subtrees of our original tree
+are obtained with the help of `prop.clades()`
+
+
+```{r}
+props = prop.clades(austroTW.dist.tr, btr)/B
+props
+```
+
+```{r}
+plot(austroTW.dist.tr, type = "u")
+# add the thermometers
+nodelabels(thermo = props, piecol = c("black", "grey"))
+```
+
+
+
+## Consensus tree
+
+```{r}
+btr.consensus = consensus(btr, p = 0.5)
+```
+
+```{r}
+x = btr.consensus$tip.label; x
+x = data.frame(Language = x, Node = 1:length(x))
+x = merge(x, formosan.meta, by.x = "Language", by.y = "Language")
+head(x)
+```
+
+
+```{r}
+x = x[order(x$Node),]
+#x$Geo = as.factor(x$Geo)
+#plot(btr.consensus, type = "u", font = as.numeric(x$Geography))
+plot(btr.consensus, type = "u")
+```
+
+
+## Estimating phylogenetic trees with phangorn
+用 `phangon` 來做 
+
+
+
+---
+```{r}
+austroTW.2 <- read_csv("formosan_dummies.csv")
+head(phylogeny)
+```
+```{r}
+pdf("austroTW_tr.pdf", height=1.85)
+
+par(mfrow=c(1,3), mai = c(0.01, 0.01, 0.01, 0.01))
+
+plot(austroTW.dist.tr, type="u", font=geo_label)
+
+plot(austroTW.dist.tr, type="u")
+# add the thermometers
+nodelabels(thermo = props, piecol = c("blue", "grey"))
+
+plot(btr.consensus, type = "u")
+
+dev.off()
+```
+
