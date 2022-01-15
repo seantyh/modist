@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 import pydub
-from .mp3_info import get_lang, get_segment_type, get_segments
+from .mp3_info import get_lang_anchor, get_segment_type, get_segments
 
 
 class ModistPcmDataset(Dataset):
@@ -14,7 +14,9 @@ class ModistPcmDataset(Dataset):
                 pcm_length_in_secs=1200,
                 speech_only=False,
                 limit_minutes=None,
-                limit_data_prop=None):
+                limit_data_prop=None,
+                lang_path=None,
+                seg_dir=None):
         """ModistPcmDataset
         limit_data_prop: a number between 0~1, the proportion of data being served
         """
@@ -25,6 +27,8 @@ class ModistPcmDataset(Dataset):
         self.sample_rate = sample_rate
         self.pcm_length = pcm_length_in_secs * sample_rate
         self.limit_minutes = limit_minutes        
+        self.lang_path = lang_path
+        self.seg_dir = seg_dir
         self.inventory = self.make_inventory(limit_data_prop)
 
     def make_inventory(self, limit_data_prop):        
@@ -46,12 +50,12 @@ class ModistPcmDataset(Dataset):
         return len(self.inventory)
 
     def make_pcm_tuples(self, pcm_name):
-        pcm_lang = get_lang(pcm_name)
-        return (pcm_name, pcm_lang)
+        pcm_lang_anchor = get_lang_anchor(pcm_name, lang_path=self.lang_path)
+        return (pcm_name, ) + pcm_lang_anchor
 
-    def make_sample_tuples(self, pcm_name, pcm_lang):
+    def make_sample_tuples(self, pcm_name, pcm_lang, pcm_anchor):
         seg_iter = self.segment(pcm_name, self.secs_per_seq)
-        return ((pcm_name, pcm_lang, category, ss, ee)
+        return ((pcm_name, pcm_lang, pcm_anchor, category, ss, ee)
                  for category, ss, ee in seg_iter)
 
     def segment(self, pcm_name, secs=5):
@@ -63,7 +67,7 @@ class ModistPcmDataset(Dataset):
 
         for offset in offsets:
             # category: (category, matched_secs)
-            category = get_segment_type(pcm_name, int(offset), int((offset+secs)))
+            category = get_segment_type(pcm_name, int(offset), int((offset+secs)), seg_dir=self.seg_dir)
             if category[1] != secs:
                 continue
             # replace category with category name only
@@ -74,9 +78,9 @@ class ModistPcmDataset(Dataset):
             yield (category, offset, offset+secs)
 
     def load_data(self, seg_item):
-        # seg_item: (pcm_name, pcm_lang, category, ss, ee)
+        # seg_item: (pcm_name, pcm_lang, pcm_anchor, category, ss, ee)
         pcm_name = seg_item[0]
-        ss, ee = seg_item[3:5]
+        ss, ee = seg_item[4:6]
         if pcm_name not in self.pcm_mmap:
             pcm_arr = np.memmap(pcm_name, np.dtype('int16'), 'r')
             self.pcm_mmap[pcm_name] = pcm_arr
@@ -87,12 +91,13 @@ class ModistPcmDataset(Dataset):
         samples = pcm_arr[ss*sr: ee*sr]
         return {
             "pcm_lang": seg_item[1],
-            "category": seg_item[2],
+            "pcm_anchor": seg_item[2],
+            "category": seg_item[3],
             "ss": ss, "ee": ee,
             "samples": samples
         }
 
-def get_modist_pcm_collate_fn(feature_extractor, lang_encoder, sample_rate):
+def get_modist_pcm_collate_fn(feature_extractor, lang_encoder, anchor_encoder, sample_rate):
     def modist_pcm_collatefn(batch):
         samples = [np.array(x["samples"], dtype=np.float32) for x in batch]
         in_tensor = feature_extractor(
@@ -101,6 +106,8 @@ def get_modist_pcm_collate_fn(feature_extractor, lang_encoder, sample_rate):
         categories = [x["category"] for x in batch]
         langs = lang_encoder.transform([x["pcm_lang"] for x in batch])
         langs = torch.tensor(langs, dtype=torch.long)
-        return {"tensorX": in_tensor, "lang": langs, "category": categories}
+        anchors = anchor_encoder.transform([x["pcm_anchor"] for x in batch])
+        anchors = torch.tensor(anchors, dtype=torch.long)
+        return {"tensorX": in_tensor, "lang": langs, "anchor": anchors, "category": categories}
     
     return modist_pcm_collatefn
