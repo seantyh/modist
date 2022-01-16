@@ -2,7 +2,7 @@
 
 BASE_DIR=$(cd $(dirname $0) && pwd)
 echo $BASE_DIR
-VIDEO_DIR="/hdd/redhen/"
+VIDEO_DIR="../data/videos"
 DATA_DIR="../data/"
 AUDIO_DIR="../data/mp3"
 
@@ -10,7 +10,7 @@ if [ ! -d ${AUDIO_DIR} ]; then
     mkdir -p ${AUDIO_DIR}
 fi;
 
-for fname in $(cat ../data/c5008_list.txt); do
+for fname in $(cat ../data/abo16_filepath.txt); do
     fpath=$(realpath $VIDEO_DIR/${fname})
     base_name=$(basename ${fname})
     mp3_path=${AUDIO_DIR}/${base_name%.*}.mp3

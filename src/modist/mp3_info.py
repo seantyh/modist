@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).parent.absolute().resolve()
 
 def get_lang_encoder(lang_path=None):    
     if not lang_path:
-        lang_path = BASE_DIR / "../../data/lang_map.csv"          
+        lang_path = BASE_DIR / "../../data/abo16_lang_map.csv"       
 
     langs = []
     with open(lang_path, "r") as fin:
@@ -24,7 +24,7 @@ def get_lang(file_name, lang_path=None):
 
     if not lang_map:  
         if not lang_path:
-            lang_path = BASE_DIR / "../../data/lang_map.csv"          
+            lang_path = BASE_DIR / "../../data/abo16_lang_map.csv"          
         with open(lang_path, "r") as fin:
             for ln in fin.readlines():
                 fname, lang = ln.strip().split(",")
