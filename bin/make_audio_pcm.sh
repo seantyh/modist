@@ -2,10 +2,8 @@
 
 BASE_DIR=$(cd $(dirname $0) && pwd)
 echo $BASE_DIR
-VIDEO_DIR="/hdd/redhen/"
-DATA_DIR="../data/"
-MP3_DIR="../data/mp3"
-PCM_DIR="../data/pcm"
+MP3_DIR="../data/anmp3"
+PCM_DIR="../data/anpcm"
 
 if [ ! -d ${PCM_DIR} ]; then
     mkdir -p ${PCM_DIR}
@@ -21,7 +19,6 @@ for fname in $(find $MP3_DIR -name *.mp3); do
         echo "transcoding to pcm: ${base_name}"
         ffmpeg -nostats \
             -i $fpath -f s16le -acodec pcm_s16le \
-	        -ss 0 -t 1200 ${pcm_path}
-        break
+	        ${pcm_path}
     fi
 done

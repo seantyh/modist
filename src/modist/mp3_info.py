@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).parent.absolute().resolve()
 
 def get_lang_anchor_encoder(lang_path=None, contains_header=True):    
     if not lang_path:
-        lang_path = BASE_DIR / "../../data/lang_map.csv"          
+        lang_path = BASE_DIR / "../../data/abo16_lang_map.csv"       
 
     langs = []
     anchors = []
@@ -30,7 +30,7 @@ def get_lang_anchor(file_name, contains_header=True, lang_path=None):
 
     if not lang_map:  
         if not lang_path:
-            lang_path = BASE_DIR / "../../data/lang_map.csv"          
+            lang_path = BASE_DIR / "../../data/abo16_lang_map.csv"          
         with open(lang_path, "r") as fin:
             if contains_header:
                 fin.readline() # skip header
